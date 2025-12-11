@@ -8,10 +8,18 @@ repositories {
     maven {
         url "https://libraries.minecraft.net"
     }
+    maven {
+        url "https://repo.md-5.net/content/repositories/snapshots/"
+    }
+    maven {
+        url "https://jitpack.io"
+    }
 }
 
 dependencies {
     compileOnly("net.md-5:bungeecord-api:1.21-R0.3")
+    compileOnly("com.github.nuvotifier.NuVotifier:nuvotifier-api:2.7.3")
+    compileOnly("com.github.nuvotifier.NuVotifier:nuvotifier-bungeecord:2.7.3")
 }
 
 
