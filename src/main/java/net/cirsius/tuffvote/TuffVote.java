@@ -7,16 +7,20 @@ import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.CommandSender;
 import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.event.EventHandler;
+import net.md_5.bungee.config.Configuration;
+import net.md_5.bungee.config.ConfigurationProvider;
+import net.md_5.bungee.config.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Arrays;
 
 public class TuffVote extends Plugin implements Listener {
 
+    private Configuration config;
     private List<String> commands;
 
     @Override
@@ -49,18 +53,16 @@ public class TuffVote extends Plugin implements Listener {
                 getDataFolder().mkdir();
             }
 
-            File configFile = new File(getDataFolder(), "config.txt");
+            File configFile = new File(getDataFolder(), "config.yml");
 
             if (!configFile.exists()) {
-                List<String> defaultContent = Arrays.asList(
-                        "# use /commands.",
-                        "# %username% is the placeholder for, usernames."
-                );
-                Files.write(configFile.toPath(), defaultContent);
+                try (InputStream in = getResourceAsStream("config.yml")) {
+                    Files.copy(in, configFile.toPath());
+                }
             }
 
-            commands = Files.readAllLines(configFile.toPath());
-            commands.removeIf(line -> line.trim().isEmpty() || line.trim().startsWith("#"));
+            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
+            commands = config.getStringList("commands");
 
         } catch (IOException e) {
             getLogger().severe("couldnt load config " + e.getMessage());

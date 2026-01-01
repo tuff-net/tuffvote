@@ -1,0 +1,5 @@
+# use /commands.
+# %username% is the placeholder for, usernames.
+
+commands:
+  - "say %username% voted"
