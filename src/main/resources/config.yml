@@ -1,5 +1,8 @@
 # use /commands.
 # %username% is the placeholder for, usernames.
 
+# services to accept votes from (leave empty to allow all)
+services: []
+
 commands:
   - "say %username% voted"

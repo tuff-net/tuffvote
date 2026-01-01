@@ -22,10 +22,12 @@ public class TuffVote extends Plugin implements Listener {
 
     private Configuration config;
     private List<String> commands;
+    private List<String> services;
 
     @Override
     public void onEnable() {
         commands = new ArrayList<>();
+        services = new ArrayList<>();
         getProxy().getPluginManager().registerListener(this, this);
         getProxy().getPluginManager().registerCommand(this, new ReloadCommand());
         loadConfig();
@@ -35,7 +37,7 @@ public class TuffVote extends Plugin implements Listener {
     public void onVote(VotifierEvent event) {
         Vote vote = event.getVote();
 
-        if (!vote.getServiceName().equalsIgnoreCase("eaglerserverlist")) {
+        if (!services.isEmpty() && services.stream().noneMatch(s -> s.equalsIgnoreCase(vote.getServiceName()))) {
             return;
         }
 
@@ -63,6 +65,7 @@ public class TuffVote extends Plugin implements Listener {
 
             config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
             commands = config.getStringList("commands");
+            services = config.getStringList("services");
 
         } catch (IOException e) {
             getLogger().severe("couldnt load config " + e.getMessage());
