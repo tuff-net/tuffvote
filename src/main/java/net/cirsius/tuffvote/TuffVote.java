@@ -2,6 +2,9 @@ package net.cirsius.tuffvote;
 
 import com.vexsoftware.votifier.bungee.events.VotifierEvent;
 import com.vexsoftware.votifier.model.Vote;
+import net.md_5.bungee.api.ChatColor;
+import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.CommandSender;
@@ -23,6 +26,7 @@ public class TuffVote extends Plugin implements Listener {
     private Configuration config;
     private List<String> commands;
     private List<String> services;
+    private String broadcastMessage;
 
     @Override
     public void onEnable() {
@@ -42,6 +46,19 @@ public class TuffVote extends Plugin implements Listener {
         }
 
         String username = vote.getUsername();
+        String serviceName = vote.getServiceName();
+        if (broadcastMessage != null && !broadcastMessage.isEmpty()) {
+            String message = broadcastMessage
+                    .replace("%username%", username)
+                    .replace("%service%", serviceName);
+            message = ChatColor.translateAlternateColorCodes('&', message);
+            TextComponent component = new TextComponent(message);
+            
+            for (ProxiedPlayer player : getProxy().getPlayers()) {
+                player.sendMessage(component);
+            }
+            getProxy().getConsole().sendMessage(component);
+        }
 
         for (String command : commands) {
             String processedCommand = command.replace("%username%", username);
@@ -66,6 +83,7 @@ public class TuffVote extends Plugin implements Listener {
             config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
             commands = config.getStringList("commands");
             services = config.getStringList("services");
+            broadcastMessage = config.getString("broadcast_message", "");
 
         } catch (IOException e) {
             getLogger().severe("couldnt load config " + e.getMessage());

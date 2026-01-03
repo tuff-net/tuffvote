@@ -6,3 +6,6 @@ services: []
 
 commands:
   - "say %username% voted"
+
+# sends a message to all players on the network when someone votes
+broadcast_message: "%username% voted on %service%&"
