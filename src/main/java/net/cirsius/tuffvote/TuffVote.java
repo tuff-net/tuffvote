@@ -1,105 +1,78 @@
 package net.cirsius.tuffvote;
 
-import com.vexsoftware.votifier.bungee.events.VotifierEvent;
-import com.vexsoftware.votifier.model.Vote;
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.chat.TextComponent;
-import net.md_5.bungee.api.connection.ProxiedPlayer;
-import net.md_5.bungee.api.plugin.Plugin;
-import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.api.CommandSender;
-import net.md_5.bungee.api.plugin.Command;
-import net.md_5.bungee.event.EventHandler;
-import net.md_5.bungee.config.Configuration;
-import net.md_5.bungee.config.ConfigurationProvider;
-import net.md_5.bungee.config.YamlConfiguration;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import org.yaml.snakeyaml.Yaml;
+import java.io.*;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
-public class TuffVote extends Plugin implements Listener {
+public class TuffVote {
 
-    private Configuration config;
+    private final Platform platform;
     private List<String> commands;
     private List<String> services;
     private String broadcastMessage;
 
-    @Override
-    public void onEnable() {
+    public TuffVote(Platform platform) {
+        this.platform = platform;
         commands = new ArrayList<>();
         services = new ArrayList<>();
-        getProxy().getPluginManager().registerListener(this, this);
-        getProxy().getPluginManager().registerCommand(this, new ReloadCommand());
+    }
+
+    public void enable() {
         loadConfig();
     }
 
-    @EventHandler
-    public void onVote(VotifierEvent event) {
-        Vote vote = event.getVote();
-
-        if (!services.isEmpty() && services.stream().noneMatch(s -> s.equalsIgnoreCase(vote.getServiceName()))) {
-            return;
-        }
-
-        String username = vote.getUsername();
-        String serviceName = vote.getServiceName();
-        if (broadcastMessage != null && !broadcastMessage.isEmpty()) {
-            String message = broadcastMessage
-                    .replace("%username%", username)
-                    .replace("%service%", serviceName);
-            message = ChatColor.translateAlternateColorCodes('&', message);
-            TextComponent component = new TextComponent(message);
-            
-            for (ProxiedPlayer player : getProxy().getPlayers()) {
-                player.sendMessage(component);
-            }
-            getProxy().getConsole().sendMessage(component);
-        }
-
-        for (String command : commands) {
-            String processedCommand = command.replace("%username%", username);
-            getProxy().getPluginManager().dispatchCommand(getProxy().getConsole(), processedCommand);
-        }
-    }
-
+    @SuppressWarnings("unchecked")
     public void loadConfig() {
         try {
-            if (!getDataFolder().exists()) {
-                getDataFolder().mkdir();
+            File folder = platform.dataFolder();
+            if (!folder.exists()) {
+                folder.mkdir();
             }
 
-            File configFile = new File(getDataFolder(), "config.yml");
+            File configFile = new File(folder, "config.yml");
 
             if (!configFile.exists()) {
-                try (InputStream in = getResourceAsStream("config.yml")) {
+                try (InputStream in = platform.resource("config.yml")) {
                     Files.copy(in, configFile.toPath());
                 }
             }
 
-            config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
-            commands = config.getStringList("commands");
-            services = config.getStringList("services");
-            broadcastMessage = config.getString("broadcast_message", "");
-
+            Yaml yaml = new Yaml();
+            try (FileInputStream fis = new FileInputStream(configFile)) {
+                Map<String, Object> data = yaml.load(fis);
+                commands = data.get("commands") instanceof List ? (List<String>) data.get("commands") : new ArrayList<>();
+                services = data.get("services") instanceof List ? (List<String>) data.get("services") : new ArrayList<>();
+                broadcastMessage = (String) data.getOrDefault("broadcast_message", "");
+            }
         } catch (IOException e) {
-            getLogger().severe("couldnt load config " + e.getMessage());
+            platform.log("couldnt load config " + e.getMessage());
         }
     }
 
-    private class ReloadCommand extends Command {
-
-        public ReloadCommand() {
-            super("tuffvotereload");
+    public void handleVote(String username, String serviceName) {
+        if (!services.isEmpty() && services.stream().noneMatch(s -> s.equalsIgnoreCase(serviceName))) {
+            return;
         }
 
-        @Override
-        public void execute(CommandSender sender, String[] args) {
-            loadConfig();
-            sender.sendMessage("config reloaded");
+        if (broadcastMessage != null && !broadcastMessage.isEmpty()) {
+            String message = broadcastMessage
+                    .replace("%username%", username)
+                    .replace("%service%", serviceName);
+            platform.broadcast(message);
         }
+
+        for (String command : commands) {
+            String processedCommand = command.replace("%username%", username);
+            platform.runCommand(processedCommand);
+        }
+    }
+
+    public interface Platform {
+        File dataFolder();
+        InputStream resource(String name);
+        void log(String msg);
+        void broadcast(String msg);
+        void runCommand(String cmd);
     }
 }

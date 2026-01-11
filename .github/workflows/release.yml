@@ -14,10 +14,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up JDK 8
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'temurin'
 
       - name: Grant execute permission for gradlew
@@ -32,13 +32,16 @@ jobs:
           # Get the latest release tag
           LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || echo "")
           
-          if [ -z "$LATEST" ] || [ "$LATEST" = "0" ]; then
-            # First auto release after "0"
-            NEXT="0.1"
+          if [ -z "$LATEST" ]; then
+            NEXT="1"
           else
-            # Increment the minor version (0.1 -> 0.2 -> 0.3 etc)
-            MINOR=$(echo "$LATEST" | sed 's/^0\.//')
-            NEXT="0.$((MINOR + 1))"
+            # Increment the minor version (1 -> 1.1 -> 1.2 etc)
+            if [ "$LATEST" = "1" ]; then
+              NEXT="1.1"
+            else
+              MINOR=$(echo "$LATEST" | sed 's/^1\.//')
+              NEXT="1.$((MINOR + 1))"
+            fi
           fi
           
           echo "version=$NEXT" >> $GITHUB_OUTPUT
@@ -51,7 +54,7 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: tuffvote ${{ steps.version.outputs.version }}
-          files: build/libs/*.jar
+          files: build/libs/TuffVote-*.jar
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
