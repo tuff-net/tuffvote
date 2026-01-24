@@ -33,14 +33,21 @@ jobs:
           LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || echo "")
           
           if [ -z "$LATEST" ]; then
-            NEXT="1"
+            NEXT="1.0"
           else
-            # Increment the minor version (1 -> 1.1 -> 1.2 etc)
-            if [ "$LATEST" = "1" ]; then
+            # Extract version using regex
+            if [[ "$LATEST" =~ ^0\. ]]; then
+              # Coming from 0.x, start fresh at 1.0
+              NEXT="1.0"
+            elif [[ "$LATEST" =~ ^1\.([0-9]+)$ ]]; then
+              # Increment 1.x versions
+              MINOR=${BASH_REMATCH[1]}
+              NEXT="1.$((MINOR + 1))"
+            elif [ "$LATEST" = "1" ]; then
               NEXT="1.1"
             else
-              MINOR=$(echo "$LATEST" | sed 's/^1\.//')
-              NEXT="1.$((MINOR + 1))"
+              # Fallback if format is unexpected
+              NEXT="1.0"
             fi
           fi
           
