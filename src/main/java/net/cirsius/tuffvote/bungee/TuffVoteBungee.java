@@ -10,6 +10,9 @@ import net.md_5.bungee.api.connection.ProxiedPlayer;
 import net.md_5.bungee.api.plugin.Command;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
+import net.md_5.bungee.config.Configuration;
+import net.md_5.bungee.config.ConfigurationProvider;
+import net.md_5.bungee.config.YamlConfiguration;
 import net.md_5.bungee.event.EventHandler;
 
 import java.io.File;
@@ -41,6 +44,16 @@ public class TuffVoteBungee extends Plugin implements Listener, TuffVote.Platfor
     @Override
     public InputStream resource(String name) {
         return getResourceAsStream(name);
+    }
+
+    @Override
+    public TuffVote.Config loadConfig(File configFile) throws Exception {
+        Configuration config = ConfigurationProvider.getProvider(YamlConfiguration.class).load(configFile);
+        return new TuffVote.Config(
+                config.getStringList("commands"),
+                config.getStringList("services"),
+                config.getString("broadcast_message", "")
+        );
     }
 
     @Override

@@ -1,9 +1,9 @@
 package net.cirsius.tuffvote;
 
-import org.yaml.snakeyaml.Yaml;
 import java.io.*;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class TuffVote {
 
@@ -22,7 +22,6 @@ public class TuffVote {
         loadConfig();
     }
 
-    @SuppressWarnings("unchecked")
     public void loadConfig() {
         try {
             File folder = platform.dataFolder();
@@ -38,17 +37,16 @@ public class TuffVote {
                 }
             }
 
-            Yaml yaml = new Yaml();
-            try (FileInputStream fis = new FileInputStream(configFile)) {
-                Map<String, Object> data = yaml.load(fis);
-                commands = data.get("commands") instanceof List ? (List<String>) data.get("commands") : new ArrayList<>();
-                services = data.get("services") instanceof List ? (List<String>) data.get("services") : new ArrayList<>();
-                broadcastMessage = (String) data.getOrDefault("broadcast_message", "");
-            }
-        } catch (IOException e) {
+            Config config = platform.loadConfig(configFile);
+            commands = config.commands();
+            services = config.services();
+            broadcastMessage = config.broadcastMessage();
+        } catch (Exception e) {
             platform.log("couldnt load config " + e.getMessage());
         }
     }
+
+    public record Config(List<String> commands, List<String> services, String broadcastMessage) { }
 
     public void handleVote(String username, String serviceName) {
         if (!services.isEmpty() && services.stream().noneMatch(s -> s.equalsIgnoreCase(serviceName))) {
@@ -71,6 +69,7 @@ public class TuffVote {
     public interface Platform {
         File dataFolder();
         InputStream resource(String name);
+        Config loadConfig(File configFile) throws Exception;
         void log(String msg);
         void broadcast(String msg);
         void runCommand(String cmd);

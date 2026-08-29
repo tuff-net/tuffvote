@@ -14,6 +14,8 @@ import com.vexsoftware.votifier.velocity.event.VotifierEvent;
 import net.cirsius.tuffvote.TuffVote;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.spongepowered.configurate.ConfigurationNode;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.File;
 import java.io.InputStream;
@@ -57,6 +59,17 @@ public class TuffVoteVelocity implements TuffVote.Platform {
     @Override
     public InputStream resource(String name) {
         return getClass().getClassLoader().getResourceAsStream(name);
+    }
+
+    @Override
+    public TuffVote.Config loadConfig(File configFile) throws Exception {
+        YamlConfigurationLoader loader = YamlConfigurationLoader.builder().path(configFile.toPath()).build();
+        ConfigurationNode config = loader.load();
+        return new TuffVote.Config(
+                config.node("commands").getList(String.class),
+                config.node("services").getList(String.class),
+                config.node("broadcast_message").getString("")
+        );
     }
 
     @Override

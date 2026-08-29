@@ -26,42 +26,36 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Get next version
+      - name: Get version from Gradle
         id: version
         run: |
-          # Get the latest release tag
-          LATEST=$(gh release list --limit 1 --json tagName -q '.[0].tagName' 2>/dev/null || echo "")
-          
-          if [ -z "$LATEST" ]; then
-            NEXT="1.0"
+          VERSION=$(./gradlew -q properties --console=plain | awk -F ': ' '$1 == "version" { print $2; exit }')
+          test -n "$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Get commit names
+        id: commits
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          if [ -n "$PREVIOUS_TAG" ]; then
+            COMMITS=$(git log --format='- %s' "$PREVIOUS_TAG..HEAD")
           else
-            # Extract version using regex
-            if [[ "$LATEST" =~ ^0\. ]]; then
-              # Coming from 0.x, start fresh at 1.0
-              NEXT="1.0"
-            elif [[ "$LATEST" =~ ^1\.([0-9]+)$ ]]; then
-              # Increment 1.x versions
-              MINOR=${BASH_REMATCH[1]}
-              NEXT="1.$((MINOR + 1))"
-            elif [ "$LATEST" = "1" ]; then
-              NEXT="1.1"
-            else
-              # Fallback if format is unexpected
-              NEXT="1.0"
-            fi
+            COMMITS=$(git log --format='- %s')
           fi
-          
-          echo "version=$NEXT" >> $GITHUB_OUTPUT
-          echo "Next version: $NEXT"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          test -n "$COMMITS" || COMMITS='- No commits since the previous release.'
+          {
+            echo 'body<<EOF'
+            echo "$COMMITS"
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: tuffvote ${{ steps.version.outputs.version }}
-          files: build/libs/TuffVote-*.jar
-          generate_release_notes: true
+          body: ${{ steps.commits.outputs.body }}
+          files: build/libs/*.jar
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
